@@ -1,0 +1,10 @@
+    
+    public interface IProfesorCurso
+    {
+        string ChangeVisibilityCurso(Guid CursoId, string ProfesorId, bool IsVisible);
+        CursoDto UpdateCursoProfessor(Guid CursoId, CursoDto CursoDto);
+        CursoDto CreateCursoProfessor(CursoDto CursoDto);
+        IEnumerable<CursoDto> GetCursoProfessor(string ProfesorId);
+        CursoDto GetSpecificCursoProfessor(Guid CursoId);
+        string DeleteCurso(Guid CursoId, string ProfesorId);
+    }
