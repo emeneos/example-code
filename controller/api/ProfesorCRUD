@@ -1,0 +1,73 @@
+
+    [RoutePrefix("api/ProfesorCurso")]
+    [Authorize(Roles = RoleName.IsProfessor)]
+    public class ProfesorCursoCRUD : ApiController
+    {
+        private readonly IProfesorCurso _profesorCursoClass;
+
+        public ProfesorCursoController(IProfesorCourse IProfesorCursoClass)
+        {
+            _profesorCourse = IProfesorCursoClass;
+        }
+
+
+        [HttpGet]
+
+        public IHttpActionResult GetCursoProfesor(string ProfesorId = null)
+        {
+            ProfesorId = User.Identity.GetUserId();
+            var result = _profesorCourse.GetCursoProfessor(ProfesorId);
+            if (result == null) return BadRequest();
+            return Ok(result);
+        }
+
+        [HttpGet]
+        [Route("GetSpecific")]
+        public IHttpActionResult GetSpecificCursoPRofesor(Guid CursoId)
+        {
+            var result = _profesorCourse.GetSpecificCursoProfessor(CursoId);
+            if (result == null) return BadRequest();
+            return Ok(result);
+        }
+
+        [HttpPost]
+        //PUT  API/Profesor/CrearCurso
+        //titulo, descripcion, imagen de curso(link)
+        public IHttpActionResult CreateCurso()
+        {
+            if (!ModelState.IsValid) return BadRequest();
+            try
+            {
+                var ProfesorId = User.Identity.GetUserId();
+                var file = HttpContext.Current.Request.Files.Count > 0 ?
+                HttpContext.Current.Request.Files[0] : null;  //gets a file from the request
+                var Titulo = HttpContext.Current.Request.Form["Titulo"]; //get tittle of course
+                var Descripcion = HttpContext.Current.Request.Form["Descripcion"]; //gets description of course
+                CursoDto Dto = new huelik.Dto.CursoDto();
+                Dto.Titulo = Titulo;
+                Dto.Descripcion = Descripcion;
+                Dto.UserId = ProfesorId;
+                //upload dto.imagenurl= imagen(file);
+                UploadResources Upload = new UploadResources(); //this class is for uploading files
+                Dto.ImagenUrl = Upload.UploadFile();//uploads the file to the cloud and return the path 
+                var result = _profesorCursoClass.CreateCursoProfessor(Dto);
+                if (result == null) return BadRequest();
+                return Ok(result);
+            }
+            catch (DbEntityValidationException e)
+            {
+
+                foreach (var eve in e.EntityValidationErrors)
+                {
+                    Console.WriteLine("Entity of type \"{0}\" in state \"{1}\" has the following validation errors:",
+                        eve.Entry.Entity.GetType().Name, eve.Entry.State);
+                    foreach (var ve in eve.ValidationErrors)
+                    {
+                        Console.WriteLine("- Property: \"{0}\", Error: \"{1}\"",
+                            ve.PropertyName, ve.ErrorMessage);
+                    }
+                }
+                throw;
+            }
+
+        }
