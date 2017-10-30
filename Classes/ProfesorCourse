@@ -1,0 +1,96 @@
+  public class ProfesorCurso:IProfesorCurso
+    {
+
+        private ApplicationDbContext _dbContext;
+        public ProfesorCurso()
+        {
+            _dbContext = new ApplicationDbContext();
+           
+        }
+        public IEnumerable<CursoDto> GetCursoProfessor(string ProfesorId) {
+            if (string.IsNullOrEmpty(ProfesorId)) return null;
+            var CursoProfesor = _dbContext.Cursos.Include(c => c.User).Where(c => c.UserId == ProfesorId);
+            if (CursoProfesor == null) return null;
+            var CursoDto = CursoProfesor.ToList().Select(Mapper.Map<Curso, CursoDto>).ToList();
+            if (!CursoDto.Any()) return null;
+            return CursoDto;
+        }
+       public CursoDto GetSpecificCursoProfessor(Guid CursoId)
+        {
+            if (CursoId == null || CursoId == Guid.Empty) return null;
+            var CursoInDb = _dbContext.Cursos.FirstOrDefault(c => c.Id == CursoId);
+            if (CursoInDb == null) return null;
+            var cursoDto = Mapper.Map<Curso, CursoDto>(CursoInDb);
+            return cursoDto;
+        }
+        public CursoDto CreateCursoProfessor(CursoDto CursoDto) {
+            var usuario = _dbContext.Users.FirstOrDefault(c => c.Id == CursoDto.UserId); //look for the user who is making the request
+            if (usuario == null)
+                return null;
+            CursoDto.Id = Guid.NewGuid();//assing guid to the new course
+            CursoDto.FechaCreacion = DateTime.Now; //creation date
+            CursoDto.FechaActualizacion = DateTime.Now; //update date
+            var NuevoCurso = Mapper.Map<CursoDto, Curso>(CursoDto); //uses automapper
+            NuevoCurso.User = usuario;
+            NuevoCurso.Visible = false;
+            _dbContext.Cursos.Add(NuevoCurso);//adds course
+            var savechanges=_dbContext.SaveChanges(); //save changes
+            if (savechanges > 0) return CursoDto; else return null; //if changes are saved, returns a Dto
+        }
+        public CursoDto UpdateCursoProfessor(Guid CursoId, CursoDto CursoDto) {
+            try
+            {
+                if (CursoDto == null) return null;
+                if (CursoId == null || CursoId == Guid.Empty) return null;
+                var Curso = _dbContext.Cursos.FirstOrDefault(c => c.Id == CursoId);
+                if (Curso == null) return null;
+                if (string.IsNullOrEmpty(CursoDto.ImagenUrl)) CursoDto.ImagenUrl = Curso.ImagenUrl;
+                CursoDto.Id = Curso.Id;
+                CursoDto.FechaCreacion = Curso.FechaCreacion;
+                CursoDto.FechaActualizacion = DateTime.Now;
+                Mapper.Map(CursoDto, Curso);
+                var changes=_dbContext.SaveChanges();
+                if (changes> 0) return CursoDto; else return null;
+            }
+            catch (DbEntityValidationException e)
+            {
+
+                foreach (var eve in e.EntityValidationErrors)
+                {
+                    Console.WriteLine("Entity of type \"{0}\" in state \"{1}\" has the following validation errors:",
+                        eve.Entry.Entity.GetType().Name, eve.Entry.State);
+                    foreach (var ve in eve.ValidationErrors)
+                    {
+                        Console.WriteLine("- Property: \"{0}\", Error: \"{1}\"",
+                            ve.PropertyName, ve.ErrorMessage);
+                    }
+                }
+                throw;
+            }
+         
+        }
+        public string ChangeVisibilityCurso(Guid CursoId, string ProfesorId,bool IsVisible)
+        {
+            if (string.IsNullOrEmpty(ProfesorId)) return HttpResultsStrings.BadRequest;
+            if (CursoId == null || CursoId == Guid.Empty) return HttpResultsStrings.BadRequest;
+            /*takes all professor courses*/
+            var CursoProfesor = _dbContext.Cursos.Include(c => c.User).Where(c => c.UserId == ProfesorId).Where(c=>c.Id==CursoId).FirstOrDefault();
+            if (CursoProfesor == null) return HttpResultsStrings.NotFoundItem;
+            var CursoDto = CursoProfesor;
+            CursoDto.Visible = IsVisible;
+            var changes=_dbContext.SaveChanges();
+            if (changes > 0) return HttpResultsStrings.ActionImplemented; else return HttpResultsStrings.BadRequest;
+           
+        }
+
+        public string DeleteCurso(Guid CursoId, string ProfesorId)
+        {
+            if (string.IsNullOrEmpty(ProfesorId)) return HttpResultsStrings.BadRequest;
+            if (CursoId == null || CursoId == Guid.Empty) return HttpResultsStrings.BadRequest;
+            var CursoProfesor = _dbContext.Cursos.Include(c => c.User).Where(c => c.UserId == ProfesorId).Where(c => c.Id == CursoId).FirstOrDefault();
+            if (CursoProfesor == null) return HttpResultsStrings.NotFoundItem;
+            _dbContext.Cursos.Remove(CursoProfesor);
+            var changes = _dbContext.SaveChanges();
+            if (changes > 0) return HttpResultsStrings.ActionImplemented; else return HttpResultsStrings.BadRequest;
+        }
+    }
